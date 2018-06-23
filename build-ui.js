@@ -1,5 +1,5 @@
 var request = new XMLHttpRequest();
-request.open("GET", "swagger.json", false)
+request.open("GET", "/public_html/v2.json", false)
 request.send();
 var swagger_json = JSON.parse(request.responseText);
 console.log(swagger_json);
@@ -27,7 +27,7 @@ for (var i = 0; i < swagger_json.tags.length ; i++) {
 };
 var req_swagger_diff = new XMLHttpRequest();
 var swagger_diff_text =""
-req_swagger_diff.open("GET", "swagger-diff.txt", false)
+req_swagger_diff.open("GET", "/public_html/swagger-diff.txt", false)
 req_swagger_diff.onreadystatechange = function() {
   swagger_diff_text = req_swagger_diff.responseText;
 }
@@ -35,6 +35,7 @@ req_swagger_diff.send()
 var swagger_diff_line = swagger_diff_text.split('\n')
 var tab = []
 var methodes = []
+var methodes_completes = []
 var changements = []
 var cpt_tag=0
 var cpt_methode=0
@@ -47,6 +48,8 @@ for(var i = 0; i < swagger_diff_line.length ; i++) {
       tag=swagger_diff_line[i].split('/')[1]
       var nom_methode=''
       nom_methode=swagger_diff_line[i].split(' ')[split.length-1]
+      meth=swagger_diff_line[i].split('-')[1]
+      methodes_completes[cpt_methode]=meth
       methodes[cpt_methode]=nom_methode
       cpt_methode++
       for (var j = 0; j < tags.length ; j++)  {
@@ -113,8 +116,9 @@ console.log(tags)
 triTags()
 
 
-
+changements.pop();
 console.log(changements)
+
 
 var longueur_obj=0;
 cpt_methode=0
@@ -183,14 +187,21 @@ for (var i = 0; i < tags.length ; i++) {
                         } else {
                            isDeprecated=isDeprecated.concat(`<div class="opblock opblock-`+Object.keys(array[cpt])[j]+` is-open">`);
                         }
-                        if (isChangement("missing endpoints", current_methode, action)) {
+                         if (isChangement("missing endpoints", current_methode, action)) {
                            firstStep=firstStep.concat(''+isDeprecated+`
                                  <div class="opblock-summary opblock-summary-`+Object.keys(array[cpt])[j]+`">
                                     <span class="opblock-summary-method">`+deleteParam(Object.keys(array[cpt])[j].toUpperCase())+`</span>
                                     <span class="opblock-summary-path">
                                        <a class="nostyle"><span>`+deleteParam(Object.keys(swagger_json.paths)[cpt])+`</span></a><!-- react-empty: 112 --><!-- react-text: 113 --> <!-- /react-text -->
                                     </span>`);
-                        } else {
+                        }else if (isChangement("new endpoints", current_methode, action)) {
+                           firstStep=firstStep.concat(''+isDeprecated+`
+                                 <div class="opblock-summary opblock-summary-`+Object.keys(array[cpt])[j]+`">
+                                    <span class="opblock-summary-method">`+newParam(Object.keys(array[cpt])[j].toUpperCase())+`</span>
+                                    <span class="opblock-summary-path">
+                                       <a class="nostyle"><span>`+newParam(Object.keys(swagger_json.paths)[cpt])+`</span></a><!-- react-empty: 112 --><!-- react-text: 113 --> <!-- /react-text -->
+                                    </span>`);
+                        }else {
                            firstStep=firstStep.concat(isDeprecated+`
                                  <div class="opblock-summary opblock-summary-`+Object.keys(array[cpt])[j]+`">
                                     <span class="opblock-summary-method">`+Object.keys(array[cpt])[j].toUpperCase()+`</span>
@@ -249,8 +260,7 @@ for (var i = 0; i < tags.length ; i++) {
                                              </table>
                                           </div>
                                        </div>`;
-                                    var params = Object.values(Object.values(array[cpt])[j].parameters)[0];
-                                 
+                                                                     
                                     parametres =`                           <div style="height: auto; border: medium none; margin: 0px; padding: 0px;">
                                           <!-- react-text: 421 --> <!-- /react-text -->
                                           <div class="opblock-body">
@@ -272,7 +282,10 @@ for (var i = 0; i < tags.length ; i++) {
                                                       </thead>
                                                       <tbody>
                                                       <tr>`
-                                    
+                             	    for(var cpt_para=0;cpt_para < Object.values(array[cpt])[j].parameters.length; cpt_para++){
+					parametres=parametres.concat(`<tr class="parametres">`);
+					var params = Object.values(Object.values(array[cpt])[j].parameters)[cpt_para];
+
                                     tabParam= {inn:"", name:"", type:"", format:"", deprecated:"", desc:"", enume:""}
                                     if (params.hasOwnProperty('in')) {
                                        tabParam.inn = params.in
@@ -358,10 +371,10 @@ for (var i = 0; i < tags.length ; i++) {
                                           });
 
                                        parametres=parametres.concat(`<pre class="body-param__example microlight"><span style="">{</span><span style="color: #555; font-weight: bold;">
-   </span>`);
+ 	</span>`);
                                        schema("", nom_objet, 0, 0);
                                        
-                                       parametres=parametres.concat(parametres_fin+`
+                                       parametres=parametres.concat(parametres_fin+consumes+`
                                           </div>`);
                                        } else {
                                           Object.values(swagger_json.definitions).forEach(function(def) {
@@ -373,14 +386,16 @@ for (var i = 0; i < tags.length ; i++) {
                                                 };
                                           });
                                              parametres=parametres.concat(`<span style="">{</span><span style="color: #555; font-weight: bold;">
-   </span>`);
+	</span>`);
                                        schema("", nom_objet, 0, 0);
                                        
-                                       parametres=parametres.concat(parametres_fin+`
+                                       parametres=parametres.concat(parametres_fin+consumes+`
                                           </div>`);
                                        }
                                        
                                     };
+				    parametres=parametres.concat(`</tr>`)
+				   }
                                  }
                                     
                            }
@@ -486,8 +501,8 @@ for (var i = 0; i < tags.length ; i++) {
                                     }
                                     if (nom_objet != ""){
                                        
-                                    responses=responses.concat(`<pre class="body-param__example microlight"><span style="">"{"</span><span style="color: #555; font-weight: bold;">
-   </span>`);
+                                    responses=responses.concat(`<pre class="body-param__example microlight"><span style="">{</span><span style="color: #555; font-weight: bold;">
+	</span>`);
                                     schema("", nom_objet, 0, 0);
                                                                      
                                     responses=responses.concat(parametres_fin+`</div>
@@ -504,7 +519,7 @@ for (var i = 0; i < tags.length ; i++) {
                                     if (isChangement("missing endpoints", current_methode, action) || isChangementParam("missing "+status, current_methode, action)) {
                                        status = deleteParam(status)
                                     } else if (isChangement("new endpoints", current_methode, action) || isChangementParam("new "+status, current_methode, action)){
-                                       tatus = newParam(status)
+                                       status = newParam(status)
                                     }
                                     responses=responses.concat(`<tr class="response ">
                                                    <td class="col response-col_status">`+status+`</td>
@@ -532,7 +547,7 @@ for (var i = 0; i < tags.length ; i++) {
                         
                         } 
                         
-                        parametres_final=parametres_final.concat(firstStep, secondStep, parametres, fermer_param, consumes, responses); 
+                        parametres_final=parametres_final.concat(firstStep, secondStep, parametres, fermer_param, responses); 
 
                         cpt_methode++
                   }
@@ -549,6 +564,21 @@ for (var i = 0; i < tags.length ; i++) {
 };
 
 function triMethode(){
+   console.log(methodes_completes)
+   for(var i = 0;i < methodes_completes.length; i++){
+	for(var j = 0; j < methodes_completes.length; j++){
+	
+		if(i != j){
+			console.log(methodes_completes[i].trim()+"        "+methodes_completes[j])
+			if(methodes_completes[i].trim() === methodes_completes[j].trim()){
+				console.log(true)
+				methodes_completes.splice(i, 1, "")	
+				methodes.splice(i, 1, "");
+			}
+		}
+	}
+   }
+
    var cpt=0
    var tableau = []
    for (var i = 0; i < tags.length; i++) {
@@ -558,7 +588,7 @@ function triMethode(){
             cpt++
          }
       };
-   };
+   };	
    methodes=tableau
 }
 
@@ -602,15 +632,12 @@ function isChangement(nom, nom_methode, action_methode) {
 
 function isChangementParam(nom, nom_methode, action_methode){
    var bool = false
-   
-   console.log(action_methode+"          "+nom_methode+"     "+ nom)
    changements.forEach(function(changement) {
       if (Object.values(changement.parametres_changements).length != 0) {
          var cpt=0
          Object.values(changement.parametres_changements).forEach(function(param){
             for (var i = 0; i < Object.values(changement.methode_changement).length; i++) {
                if (changement.methode_changement[i].action.trim() === action_methode && changement.methode_changement[i].nom_methode.trim() === nom_methode && cpt==i) {
-                  
                   for (var j = 0; j < param.length; j++) {
                      if (param[j].match(nom)){
                            bool = true
@@ -650,7 +677,6 @@ function diff(i, nom_changement, methode_changement, parametres_changements){
       }
    } else {
       tab_param_changement[cpt_param]=swagger_diff_line[i].split('-')[1]
-      console.log(tab_param_changement)
       cpt_param++
       if(swagger_diff_line[i+1] == undefined || !swagger_diff_line[i+1].trim().match("response")) {
          if(cpt_param != 0){
@@ -695,31 +721,31 @@ function schema(parametres, nom_objet, cpt_properties, cpt_models){
             } 
             if (String(Object.keys(Object.values(swagger_json.definitions[nom_objet].properties)[cpt_properties])[i]).trim() === "items") {
                parametres=parametres.concat(`<span style="">[</span><span style="color: #555; font-weight: bold;">
-   </span>`);
+	</span>`);
                var tab_items = Object.values(Object.values(swagger_json.definitions[nom_objet].properties)[cpt_properties])[i];
                if (Object.keys(tab_items)[0] == "type"){
-                  parametres=parametres.concat(`<span style="color: #555; font-weight: bold;">`+Object.values(tab_items)[0]+`</span>`);
+                  parametres=parametres.concat(`	<span style="color: #555; font-weight: bold;">`+Object.values(tab_items)[0]+`</span>`);
                } else {
                   var ob = Object.values(tab_items)[0].split('/');
                   parametres = parametres.concat(ecrire_param("", ob[ob.length-1], true));
                };
                parametres=parametres.concat(`
-                  <span style="">]</span><span style="color: #555; font-weight: bold;">`);
+	<span style="">]</span><span style="color: #555; font-weight: bold;">`);
                
             };
          };
          if (cpt_properties < tab_properties.length-1){
                parametres=parametres.concat(`<span style="">,</span><span style="color: #555; font-weight: bold;">
-   </span>`);
-            } else {
-               parametres=parametres.concat(`<span style="color: #555; font-weight: bold;">
-   </span><span style="">}</span>`);
-            };
+	</span>`);
+            }/* else {
+               parametres=parametres.concat(`<span style="color: #555; font-weight: bold;"></span>
+	<span style="">}</span>`);
+            };*/
          schema(parametres, nom_objet, cpt_properties+1, 0);
       };
    } else {
-      parametres=parametres.concat(`<span style="color: #555; font-weight: bold;">
-</span><span style="">}</span></pre>`);
+      parametres=parametres.concat(`<span style="color: #555; font-weight: bold;"></span>
+<span style="">}</span></pre>`);
       
    };
    if (cpt_properties == tab_properties.length){
@@ -731,30 +757,30 @@ function ecrire_param(parametres, o, estArray){
    var tab_properties2 = Object.keys(swagger_json.definitions[o].properties);
    if (!estArray) {
       parametres=parametres.concat(`<span style="color: #555;">`+o+`</span><span style="">:</span><span style="">{</span><span style="color: #555; font-weight: bold;"> 
-    </span>`);
+	</span>`);
    };   
    for (var i = 0; i < tab_properties2.length; i++) {
       if (i < tab_properties2.length) {
-         parametres=parametres.concat(`<span style="color: #555;">`+Object.keys(swagger_json.definitions[o].properties)[i]+`</span><span style="">:</span><span style="color: #555; font-weight: bold;"> </span>`);
+         parametres=parametres.concat(`	<span style="color: #555;">`+Object.keys(swagger_json.definitions[o].properties)[i]+`</span><span style="">:</span><span style="color: #555; font-weight: bold;"></span>`);
          var tab = Object.values(Object.values(swagger_json.definitions[o].properties)[i]);
          var ob ="";
          for (var j = 0; j < tab.length; j++) {
             if (String(Object.values(tab)[j]).trim() === "integer") {
                parametres=parametres.concat(`<span style="color: #555; font-weight: bold;">0</span>`);
             } else if (String(Object.values(tab)[j]).trim() === "string") {
-               parametres=parametres.concat(`<span style="color: #555; font-weight: bold;">`+Object.values(Object.values(swagger_json.definitions[o].properties)[i])[j]+`</span>`);
+               parametres=parametres.concat(`	<span style="color: #555; font-weight: bold;">`+Object.values(Object.values(swagger_json.definitions[o].properties)[i])[j]+`</span>`);
             }
             if (String(Object.keys(Object.values(swagger_json.definitions[o].properties)[i])[j]).trim() === "example") {
-               parametres=parametres.concat(`<span style="color: #555; font-weight: bold;">`+Object.values(Object.values(swagger_json.definitions[o].properties)[i])[j]+`</span>`);
+               parametres=parametres.concat(`	<span style="color: #555; font-weight: bold;">`+Object.values(Object.values(swagger_json.definitions[o].properties)[i])[j]+`</span>`);
             };
          };
          if (i < tab_properties2.length-1){
                parametres=parametres.concat(`<span style="">,</span><span style="color: #555; font-weight: bold;">
-      </span>`);
+	</span>`);
             } else {
                parametres=parametres.concat(`<span style="color: #555; font-weight: bold;">
-      </span><span style="">}</span><span style="color: #555; font-weight: bold;">
-      </span>`);
+	</span><span style="">}</span><span style="color: #555; font-weight: bold;">
+	</span>`);
             };
       };
    };
